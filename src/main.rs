@@ -1,5 +1,3 @@
-use std::mem::replace;
-
 use clap::{ArgEnum, Parser};
 use xcb::randr;
 use xcb::x;
