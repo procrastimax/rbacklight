@@ -20,7 +20,6 @@ struct Args {
     /// Set backlight to value.
     #[clap(short, long)]
     set: Option<u32>,
-
 }
 
 fn main() {
@@ -33,6 +32,8 @@ fn main() {
     let (min_backlight, max_backlight) =
         query_min_max_backlight_values(&conn, output, backlight_atom);
 
+    let valid_backlight_range = min_backlight..=max_backlight;
+
     if args.get == true {
         let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
         println!("{}", curr_backlight);
@@ -42,7 +43,7 @@ fn main() {
         println!("{}", max_backlight);
     } else {
         if let Some(val) = args.set {
-            if val >= min_backlight && max_backlight >= val {
+            if valid_backlight_range.contains(&val) {
                 request_backlight_value_change(val, &conn, output, backlight_atom);
             } else {
                 panic!(
