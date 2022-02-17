@@ -42,6 +42,14 @@ struct Args {
     /// Number of steps to be used for steps mode. This is required for 'step' mode.
     #[clap(long)]
     steps: Option<u32>,
+
+    /// Increases the backlight value. The value depends from the set mode.
+    #[clap(short, long)]
+    inc: Option<u32>,
+
+    /// Decreases the backlight value. The value depends from the set mode.
+    #[clap(short, long)]
+    dec: Option<u32>,
 }
 
 fn main() {
@@ -71,16 +79,59 @@ fn main() {
                 println!("{}", min_backlight);
             } else if args.max == true {
                 println!("{}", max_backlight);
-            } else {
-                if let Some(val) = args.set {
-                    if valid_backlight_range.contains(&val) {
-                        request_backlight_value_change(val, &conn, output, backlight_atom);
+            } else if let Some(inc_val) = args.inc {
+                let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
+                let new_backlight_val =
+                    if ((curr_backlight as i32) + (inc_val as i32)) > max_backlight as i32 {
+                        max_backlight
                     } else {
-                        panic!(
-                            "Absolute backlight value out of bounds! Min:{} Max:{} Value:{}",
-                            min_backlight, max_backlight, val
-                        );
-                    }
+                        curr_backlight + inc_val
+                    };
+
+                if valid_backlight_range.contains(&new_backlight_val) {
+                    request_backlight_value_change(
+                        new_backlight_val,
+                        &conn,
+                        output,
+                        backlight_atom,
+                    );
+                } else {
+                    panic!(
+                        "Absolute backlight value out of bounds! Min:{} Max:{} Value:{}",
+                        min_backlight, max_backlight, new_backlight_val
+                    );
+                }
+            } else if let Some(dec_val) = args.dec {
+                let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
+
+                let new_backlight_val =
+                    if ((curr_backlight as i32) - (dec_val as i32)) < min_backlight as i32 {
+                        min_backlight
+                    } else {
+                        curr_backlight - dec_val
+                    };
+
+                if valid_backlight_range.contains(&new_backlight_val) {
+                    request_backlight_value_change(
+                        new_backlight_val,
+                        &conn,
+                        output,
+                        backlight_atom,
+                    );
+                } else {
+                    panic!(
+                        "Absolute backlight value out of bounds! Min:{} Max:{} Value:{}",
+                        min_backlight, max_backlight, new_backlight_val
+                    );
+                }
+            } else if let Some(val) = args.set {
+                if valid_backlight_range.contains(&val) {
+                    request_backlight_value_change(val, &conn, output, backlight_atom);
+                } else {
+                    panic!(
+                        "Absolute backlight value out of bounds! Min:{} Max:{} Value:{}",
+                        min_backlight, max_backlight, val
+                    );
                 }
             }
         }
@@ -265,6 +316,46 @@ fn handle_non_absolute(
         println!("{}", min_val);
     } else if args.max == true {
         println!("{}", max_val);
+    } else if let Some(inc_val) = args.inc {
+        // calculate new to be increased backlight val
+        let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
+        let val_step = absolute_to_steps(max_backlight, max_val, curr_backlight);
+        let new_backlight_val = if ((val_step as i32) + (inc_val as i32)) > max_val as i32 {
+            max_val
+        } else {
+            val_step + inc_val
+        };
+
+        // set increased backlight val
+        if valid_backlight_range.contains(&new_backlight_val) {
+            let val = steps_to_absolute(max_backlight, max_val, new_backlight_val);
+            request_backlight_value_change(val, &conn, output, backlight_atom);
+        } else {
+            panic!(
+                "Backlight value out of bounds! Min:{} Max:{} Value:{}",
+                min_val, max_val, new_backlight_val
+            );
+        }
+    } else if let Some(dec_val) = args.dec {
+        // calculate new to be decreased backlight val
+        let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
+        let val_step = absolute_to_steps(max_backlight, max_val, curr_backlight);
+        let new_backlight_val = if ((val_step as i32) - (dec_val as i32)) < min_val as i32 {
+            min_val
+        } else {
+            val_step - dec_val
+        };
+
+        // set decreased backlight val
+        if valid_backlight_range.contains(&new_backlight_val) {
+            let val = steps_to_absolute(max_backlight, max_val, new_backlight_val);
+            request_backlight_value_change(val, &conn, output, backlight_atom);
+        } else {
+            panic!(
+                "Backlight value out of bounds! Min:{} Max:{} Value:{}",
+                min_val, max_val, new_backlight_val
+            );
+        }
     } else {
         if let Some(val_step) = args.set {
             if valid_backlight_range.contains(&val_step) {
