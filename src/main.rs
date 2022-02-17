@@ -2,6 +2,12 @@ use clap::{ArgEnum, Parser};
 use xcb::randr;
 use xcb::x;
 
+// TODO: Add notification handling
+// TODO: Add proper error handling - always panic is not nice, use stderr and maybe add a verbose option and print to stdout
+// TODO: what happens when the min_backlight value from xcb is not 0? -> is this even possible?
+// TODO: function documentation
+// TODO: test on more systems
+
 #[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
 enum Mode {
     Absolute,
