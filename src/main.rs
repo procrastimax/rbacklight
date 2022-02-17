@@ -5,13 +5,22 @@ use xcb::x;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
+    /// Get current backlight value.
+    #[clap(short, long)]
+    get: bool,
+
+    /// Returns absolute max backlight value.
+    #[clap(long)]
+    max: bool,
+
+    /// Returns absolute min backlight value.
+    #[clap(long)]
+    min: bool,
+
     /// Set backlight to value.
     #[clap(short, long)]
     set: Option<u32>,
 
-    /// Get current backlight value.
-    #[clap(short, long)]
-    get: bool,
 }
 
 fn main() {
@@ -27,6 +36,10 @@ fn main() {
     if args.get == true {
         let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
         println!("{}", curr_backlight);
+    } else if args.min == true {
+        println!("{}", min_backlight);
+    } else if args.max == true {
+        println!("{}", max_backlight);
     } else {
         if let Some(val) = args.set {
             if val >= min_backlight && max_backlight >= val {
