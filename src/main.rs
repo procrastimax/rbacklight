@@ -1,3 +1,5 @@
+use std::mem::replace;
+
 use clap::{ArgEnum, Parser};
 use xcb::randr;
 use xcb::x;
@@ -15,6 +17,13 @@ struct Args {
     /// Get current backlight value.
     #[clap(short, long)]
     get: bool,
+
+    /// A string to format/ prettify the output of the 'get' option.
+    /// The following values can be included: %val - current value, %min - minimal value, %max - maximal value.
+    /// '%' needs to be escaped with '%%'.
+    /// Example: "%v-%m"
+    #[clap(short, long)]
+    pretty_format: Option<String>,
 
     /// Returns max backlight value. Value depends on mode.
     #[clap(long)]
@@ -53,7 +62,13 @@ fn main() {
             let valid_backlight_range = min_backlight..=max_backlight;
             if args.get == true {
                 let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
-                println!("{}", curr_backlight);
+                if let Some(pretty_output) = args.pretty_format {
+                    let pretty_out =
+                        format_output(min_backlight, max_backlight, curr_backlight, pretty_output);
+                    println!("{}", pretty_out);
+                } else {
+                    println!("{}", curr_backlight);
+                }
             } else if args.min == true {
                 println!("{}", min_backlight);
             } else if args.max == true {
@@ -103,6 +118,14 @@ fn main() {
             }
         }
     }
+}
+
+fn format_output(min: u32, max: u32, val: u32, format: String) -> String {
+    let format = format.replace("%val", &val.to_string());
+    let format = format.replace("%min", &min.to_string());
+    let format = format.replace("%max", &max.to_string());
+    let format = format.replace("%%", "%");
+    return format;
 }
 
 fn init_bus_connection() -> (xcb::Connection, xcb::randr::Output) {
@@ -234,7 +257,12 @@ fn handle_non_absolute(
     if args.get == true {
         let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
         let val_step = absolute_to_steps(max_backlight, max_val, curr_backlight);
-        println!("{}", val_step);
+        if let Some(pretty_output) = &args.pretty_format {
+            let pretty_out = format_output(min_val, max_val, val_step, pretty_output.to_string());
+            println!("{}", pretty_out);
+        } else {
+            println!("{}", val_step);
+        }
     } else if args.min == true {
         println!("{}", min_val);
     } else if args.max == true {
