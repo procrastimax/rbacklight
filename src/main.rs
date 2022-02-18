@@ -1,8 +1,8 @@
 use clap::{ArgEnum, Parser};
+use notify_rust::{Hint, Notification};
 use xcb::randr;
 use xcb::x;
 
-// TODO: Add notification handling
 // TODO: Add proper error handling - always panic is not nice, use stderr and maybe add a verbose option and print to stdout
 // TODO: what happens when the min_backlight value from xcb is not 0? -> is this even possible?
 // TODO: function documentation
@@ -56,7 +56,17 @@ struct Args {
     /// Decreases the backlight value. The value depends from the set mode.
     #[clap(short, long)]
     dec: Option<u32>,
+
+    /// If this flag is set, notifications are emitted every time the backlight value is to be changed.
+    #[clap(short, long)]
+    notifications: bool,
+
+    /// Specifies the title string of the notification. If not set, the title of the notification is the apps's name.
+    #[clap(short, long)]
+    title: Option<String>,
 }
+
+const APPNAME: &str = env!("CARGO_PKG_NAME");
 
 fn main() {
     let args = Args::parse();
@@ -65,8 +75,8 @@ fn main() {
 
     let backlight_atom = query_backlight_atom(&conn);
 
-    let (min_backlight, max_backlight) =
-        query_min_max_backlight_values(&conn, output, backlight_atom);
+    // we assume that the min backlight is always 0
+    let (_, max_backlight) = query_min_max_backlight_values(&conn, output, backlight_atom);
 
     match args.mode {
         // ABSOLUTE MODE
@@ -76,7 +86,7 @@ fn main() {
                 output,
                 backlight_atom,
                 max_backlight,
-                min_backlight,
+                0,
                 max_backlight,
                 &args,
                 &identity,
@@ -241,6 +251,12 @@ fn handle_backlight_requests(
     to_step: &dyn Fn(u32, u32, u32) -> u32,
     from_step: &dyn Fn(u32, u32, u32) -> u32,
 ) {
+    let notification_title = if let Some(title) = &args.title {
+        &title
+    } else {
+        APPNAME
+    };
+
     let valid_backlight_range = min_val..=max_val;
     if args.get == true {
         let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom);
@@ -269,6 +285,7 @@ fn handle_backlight_requests(
         if valid_backlight_range.contains(&new_backlight_val) {
             let val = from_step(max_backlight, max_val, new_backlight_val);
             request_backlight_value_change(val, &conn, output, backlight_atom);
+            send_notification(max_backlight, val, notification_title);
         } else {
             panic!(
                 "Backlight value out of bounds! Min:{} Max:{} Value:{}",
@@ -289,6 +306,7 @@ fn handle_backlight_requests(
         if valid_backlight_range.contains(&new_backlight_val) {
             let val = from_step(max_backlight, max_val, new_backlight_val);
             request_backlight_value_change(val, &conn, output, backlight_atom);
+            send_notification(max_backlight, val, notification_title);
         } else {
             panic!(
                 "Backlight value out of bounds! Min:{} Max:{} Value:{}",
@@ -300,6 +318,7 @@ fn handle_backlight_requests(
             if valid_backlight_range.contains(&val_step) {
                 let val = from_step(max_backlight, max_val, val_step);
                 request_backlight_value_change(val, &conn, output, backlight_atom);
+                send_notification(max_backlight, val, notification_title);
             } else {
                 panic!(
                     "Backlight value out of bounds! Min:{} Max:{} Value:{}",
@@ -348,4 +367,30 @@ fn steps_to_absolute(max: u32, steps: u32, val: u32) -> u32 {
 /// This function always returns val
 fn identity(_max: u32, _steps: u32, val: u32) -> u32 {
     return val;
+}
+
+fn send_notification(max_abs: u32, abs_val: u32, title: &str) {
+    // we always need step 100 (relative mode), since this is the representation of percentage we need
+    let rel_val = absolute_to_steps(max_abs, 100, abs_val);
+
+    let icon_name = if rel_val > 50 {
+        "brightness-high"
+    } else {
+        "brightness-low"
+    };
+
+    Notification::new()
+        // set static ID to override previous notification
+        .id(765432)
+        .summary(title)
+        .body(&format!("{}%", rel_val))
+        .icon(icon_name)
+        .appname(APPNAME)
+        .hint(Hint::CustomInt(
+            "value".to_string(),
+            rel_val.try_into().unwrap(),
+        ))
+        .hint(Hint::Category("device".to_string()))
+        .show()
+        .unwrap();
 }
