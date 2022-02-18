@@ -157,7 +157,13 @@ fn handle_backlight() -> Result<(), Box<dyn error::Error>> {
 fn init_bus_connection() -> Result<(xcb::Connection, xcb::randr::Output), Box<dyn error::Error>> {
     let (conn, screen_num) = xcb::Connection::connect(None)?;
     let setup = conn.get_setup();
-    let screen = setup.roots().nth(screen_num as usize).unwrap();
+
+    let screen = if let Some(screen) = setup.roots().nth(screen_num as usize) {
+        screen
+    } else {
+        return Err(Box::new(custom_errors::NoValidScreenResourceError));
+    };
+
     let root_window = screen.root();
     let curr_screen_res =
         conn.wait_for_reply(conn.send_request(&randr::GetScreenResourcesCurrent {
@@ -421,10 +427,7 @@ fn send_notification(max_abs: u32, abs_val: u32, title: &str) -> Result<(), Box<
         .body(&format!("{}%", rel_val))
         .icon(icon_name)
         .appname(APPNAME)
-        .hint(Hint::CustomInt(
-            "value".to_string(),
-            rel_val.try_into().unwrap(),
-        ))
+        .hint(Hint::CustomInt("value".to_string(), rel_val.try_into()?))
         .hint(Hint::Category("device".to_string()))
         .show()?;
     return Ok(());
