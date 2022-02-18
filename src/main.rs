@@ -28,7 +28,7 @@ struct Args {
     /// A string to format/ prettify the output of the 'get' option.
     /// The following values can be included: %val - current value, %min - minimal value, %max - maximal value.
     /// '%' needs to be escaped with '%%'.
-    /// Example: "%v-%m"
+    /// Example: "%val-%max"
     #[clap(short, long)]
     pretty_format: Option<String>,
 
@@ -44,8 +44,8 @@ struct Args {
     #[clap(short, long)]
     set: Option<u32>,
 
-    /// Mode to handle backlight values
-    #[clap(arg_enum, default_value_t = Mode::Absolute)]
+    /// Mode to handle backlight values.
+    #[clap(arg_enum, help="Mode to handle backlight values.\n - Absolute Mode: does not change any values, receives and responds with raw backlight values (the range of these values can vary between systems)\n - Relative Mode: maps the absolute values on a range 0-100\n - Step Mode: maps the absolute values on a range 0 - steps, here the steps parameter can be set arbitrarily\n", default_value_t = Mode::Absolute)]
     mode: Mode,
 
     /// Number of steps to be used for steps mode. This is required for 'step' mode.

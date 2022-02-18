@@ -2,6 +2,8 @@
 name = "rbacklight"
 version = "0.1.0"
 edition = "2021"
+description = "A rewrite of xbacklight in rust with more features."
+license = "GPLv3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
