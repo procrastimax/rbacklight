@@ -49,7 +49,7 @@ struct Args {
     mode: Mode,
 
     /// Number of steps to be used for steps mode. This is required for 'step' mode.
-    #[clap(long)]
+    #[clap(long, required_if_eq("mode", "step"))]
     steps: Option<u32>,
 
     /// Increases the backlight value. The value depends from the set mode.
@@ -347,18 +347,19 @@ fn handle_backlight_requests(
                 val: val_step,
             }));
         }
+
+    // HANDLE CASE OF NO COMMANDS
     } else {
-        if let Some(val_step) = args.set {
-            if valid_backlight_range.contains(&val_step) {
-                let val = from_step(max_backlight, max_val, val_step);
-                request_backlight_value_change(val, &conn, output, backlight_atom);
-                send_notification(max_backlight, val, notification_title);
-            } else {
-                panic!(
-                    "Backlight value out of bounds! Min:{} Max:{} Value:{}",
-                    min_val, max_val, val_step
-                );
-            }
+        // if no arguments/ options are provided, just print out the current absolute value
+        let curr_backlight = query_current_backlight_value(&conn, output, backlight_atom)?;
+        let val_step = to_step(max_backlight, max_val, curr_backlight);
+        if let Some(pretty_output) = &args.pretty_format {
+            let pretty_out = format_output(min_val, max_val, val_step, pretty_output.to_string());
+            println!("{}", pretty_out);
+            return Ok(());
+        } else {
+            println!("{}", val_step);
+            return Ok(());
         }
     }
 }
