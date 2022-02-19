@@ -100,12 +100,12 @@ rbacklight --max
 
 Set backlight to 50%:
 ```sh
-rbacklight -s 0
+rbacklight relative -s 50
 ```
 
 Set backlight to a specific value within an interval (ca. 60%):
 ```sh
-rbacklight -s 0
+rbacklight steps --steps 10 -s 6
 ```
 
 Increase backlight in steps of 20:
