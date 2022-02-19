@@ -108,7 +108,7 @@ Set backlight to a specific value within an interval (ca. 60%):
 rbacklight steps --steps 10 -s 6
 ```
 
-Increase backlight in steps of 20:
+Increase backlight in steps of 1/20:
 ```sh
 rbacklight step --steps 20 --inc 1
 ```
