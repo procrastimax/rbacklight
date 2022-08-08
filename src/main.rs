@@ -60,7 +60,7 @@ struct Args {
     #[clap(short, long)]
     dec: Option<u32>,
 
-    /// If this flag is set, notifications are emitted every time the backlight value is to be changed.
+    /// If this flag is set, notifications are emitted every time the backlight value is changed.
     #[clap(short, long)]
     notifications: bool,
 
@@ -304,7 +304,9 @@ fn handle_backlight_requests(
         if valid_backlight_range.contains(&new_backlight_val) {
             let val = from_step(max_backlight, max_val, new_backlight_val);
             request_backlight_value_change(val, &conn, output, backlight_atom)?;
-            send_notification(max_backlight, val, notification_title)?;
+            if args.notifications {
+                send_notification(max_backlight, val, notification_title)?;
+            }
             return Ok(());
         } else {
             return Err(Box::new(custom_errors::ValueOutOfRangeError {
@@ -329,7 +331,9 @@ fn handle_backlight_requests(
         if valid_backlight_range.contains(&new_backlight_val) {
             let val = from_step(max_backlight, max_val, new_backlight_val);
             request_backlight_value_change(val, &conn, output, backlight_atom)?;
-            send_notification(max_backlight, val, notification_title)?;
+            if args.notifications {
+                send_notification(max_backlight, val, notification_title)?;
+            }
             return Ok(());
         } else {
             return Err(Box::new(custom_errors::ValueOutOfRangeError {
@@ -344,7 +348,9 @@ fn handle_backlight_requests(
         if valid_backlight_range.contains(&val_step) {
             let val = from_step(max_backlight, max_val, val_step);
             request_backlight_value_change(val, &conn, output, backlight_atom)?;
-            send_notification(max_backlight, val, notification_title)?;
+            if args.notifications {
+                send_notification(max_backlight, val, notification_title)?;
+            }
             return Ok(());
         } else {
             return Err(Box::new(custom_errors::ValueOutOfRangeError {
